@@ -197,6 +197,97 @@ def batch_delete_documents():
         db.session.rollback()
         return jsonify({'error': f'批量删除失败: {str(e)}'}), 500
 
+@main_bp.route('/api/search/advanced', methods=['GET'])
+def advanced_search():
+    """高级搜索接口"""
+    try:
+        query = request.args.get('q', '')
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+        sort_by = request.args.get('sort_by', 'relevance')
+        search_mode = request.args.get('search_mode', 'or')  # 新增搜索模式参数
+        
+        # 验证参数
+        if page < 1:
+            page = 1
+        if per_page < 1 or per_page > 100:
+            per_page = 10
+        if search_mode not in ['or', 'and']:
+            search_mode = 'or'
+        
+        from app.services.search_service import search_service
+        search_result = search_service.advanced_search(
+            query=query,
+            page=page,
+            per_page=per_page,
+            sort_by=sort_by,
+            search_mode=search_mode  # 传递搜索模式
+        )
+        
+        return jsonify(search_result)
+        
+    except Exception as e:
+        return jsonify({
+            'error': f'搜索失败: {str(e)}',
+            'query': request.args.get('q', ''),
+            'results': [],
+            'pagination': {
+                'page': 1,
+                'per_page': 10,
+                'total': 0,
+                'pages': 0
+            }
+        }), 500
+
+@main_bp.route('/api/search/suggestions', methods=['GET'])
+def search_suggestions():
+    """搜索建议接口"""
+    try:
+        query = request.args.get('q', '')
+        limit = request.args.get('limit', 5, type=int)
+        
+        from app.services.search_service import search_service
+        suggestions = search_service.search_suggestions(query, limit)
+        
+        return jsonify({
+            'query': query,
+            'suggestions': suggestions
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': f'获取搜索建议失败: {str(e)}',
+            'suggestions': []
+        }), 500
+
+@main_bp.route('/api/search/stats', methods=['GET'])
+def search_stats():
+    """搜索统计信息"""
+    try:
+        from app.models import Document, Category
+        
+        total_documents = Document.query.count()
+        total_categories = Category.query.count()
+        
+        # 最近7天创建的文档（示例）
+        from datetime import datetime, timedelta
+        week_ago = datetime.utcnow() - timedelta(days=7)
+        recent_documents = Document.query.filter(
+            Document.created_at >= week_ago
+        ).count()
+        
+        return jsonify({
+            'total_documents': total_documents,
+            'total_categories': total_categories,
+            'recent_documents_7d': recent_documents,
+            'last_updated': datetime.utcnow().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': f'获取统计信息失败: {str(e)}'
+        }), 500
+
 @main_bp.route('/api/categories', methods=['GET'])
 def get_categories():
     """获取分类列表"""
