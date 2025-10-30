@@ -13,17 +13,16 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     
-    # 注册蓝图 - 清晰的分离
-    from app.routes_home import home_bp          # 主页/看板
-    from app.routes import main_bp               # 主要API
-    from app.routes_ai import ai_bp              # AI功能API
-    from app.routes_document_ai import document_ai_bp  # 文档AI处理API
+    # 注册蓝图
+    from app.routes import main_bp
+    from app.routes_ai import ai_bp
+    from app.routes_document_ai_simple import document_ai_bp  # 使用简化版路由
+    from app.routes_dashboard import dashboard_bp
     
-    # 注册顺序很重要：页面路由在前，API路由在后
-    app.register_blueprint(home_bp)              # 根路径显示看板
-    app.register_blueprint(main_bp, url_prefix='/api')      # API基础路径
-    app.register_blueprint(ai_bp, url_prefix='/api/ai')     # AI API
-    app.register_blueprint(document_ai_bp, url_prefix='/api/ai')  # 文档AI API
+    app.register_blueprint(main_bp)
+    app.register_blueprint(ai_bp, url_prefix='/api/ai')
+    app.register_blueprint(document_ai_bp, url_prefix='/api/ai')
+    app.register_blueprint(dashboard_bp)
     
     # 使用应用上下文进行AI服务初始化
     with app.app_context():
